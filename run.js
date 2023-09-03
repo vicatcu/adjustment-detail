@@ -95,16 +95,28 @@ function buildRecord(record, lineNumber) {
         r['Amount'] = record[amountIdx];
       }
       const typeIdx = record.findIndex(v => ['Account', 'Invoiced'].includes(v));
+      let nextSingleWordRecordIdx = -1;
       if (typeIdx >= 0) {
         r['Type'] = record[typeIdx];
-        r['Reason'] = record[typeIdx + 1];
-        r['Adjusted By'] = record[typeIdx + 2];
+        nextSingleWordRecordIdx = record.slice(typeIdx + 1).findIndex(v => v.split(/\s+/).length === 1);
+        if (nextSingleWordRecordIdx >= 0) {
+          r['Reason'] = record.slice(typeIdx + 1, typeIdx + 1 + nextSingleWordRecordIdx).join(' ');
+          r['Adjusted By'] = record[typeIdx + 1 + nextSingleWordRecordIdx];
+        } else {
+          console.log('Failed to find plausible Adjusted By field');
+        }
       }
       let remainingRecord = record;
-      if (dateTotalIdx >= 0) {
-        remainingRecord = record.slice(0, dateTotalIdx);
+      // if (dateTotalIdx >= 0) {
+      //   remainingRecord = record.slice(0, dateTotalIdx);
+      // }
+      const tabooIndices = [0, 1, amountIdx, typeIdx];
+      if (nextSingleWordRecordIdx >= 0) {
+        for (let ii = typeIdx + 1; ii <= typeIdx + 1 + nextSingleWordRecordIdx; ii++) {
+          tabooIndices.push(ii);
+        }
       }
-      remainingRecord = remainingRecord.filter((v, idx) => ![0, 1, amountIdx, typeIdx, typeIdx + 1, typeIdx + 2].includes(idx));
+      remainingRecord = remainingRecord.filter((v, idx) => !tabooIndices.includes(idx));
       r['Client'] = remainingRecord.join(' ');          
     }
     
@@ -136,6 +148,12 @@ function buildRecord(record, lineNumber) {
     }
     if (r['Adjusted By'] === undefined) {
       console.log('UNDEFINED Adjusted By', lineNumber, record, r);
+    } else if (r['Adjusted By'].split(/\s+/).length !== 1) {
+      console.log('WORD VIOLATION Adjusted By', lineNumber, record, r);
+    }
+
+    if (!r.Client?.trim()) {
+      console.log('UNDEFINED Client', lineNumber, record, r);
     }
 
     if (r.Amount) {
