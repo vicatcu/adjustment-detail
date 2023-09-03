@@ -23,7 +23,7 @@ function isNumeric(n) {
   return !isNaN(parseFloat(n)) && isFinite(n);
 }
 
-function buildRecord(record) {
+function buildRecord(record, lineNumber) {
   if (record.length > 0) {
     const r = {};
     r.date = record[0][0];
@@ -109,11 +109,11 @@ function buildRecord(record) {
     }
     
     if (!['Account', 'Invoiced'].includes(r.Type)) {
-      console.log('UNEXPECTED TYPE', record, r);
+      console.log('UNEXPECTED TYPE', lineNumber, record, r);
     }
 
     if (!isNumeric(r['Account No'])) {
-      console.log('NON-NUMERIC ACCOUNT NO', record, r);
+      console.log('NON-NUMERIC ACCOUNT NO', lineNumber, record, r);
     }
     
     if (r.Reason === undefined) {
@@ -124,7 +124,7 @@ function buildRecord(record) {
       }
     }
     if (r.Reason === undefined) {
-      console.log('UNDEFINED REASON', record, r);
+      console.log('UNDEFINED REASON', lineNumber, record, r);
     }
 
     if (r['Adjusted By'] === undefined) {
@@ -135,17 +135,17 @@ function buildRecord(record) {
       }
     }
     if (r['Adjusted By'] === undefined) {
-      console.log('UNDEFINED Adjusted By', record, r);
+      console.log('UNDEFINED Adjusted By', lineNumber, record, r);
     }
 
     if (r.Amount) {
       r.amount = +r.Amount.replace(/[$, ]/g, '');
     } else {
-      console.log('Amount is missing');
+      console.log(lineNumber,'Amount is missing');
     }
 
     if (!isNumeric(r.amount)) {
-      console.log('NON-NUMERIC AMOUNT', r, record);
+      console.log('NON-NUMERIC AMOUNT', lineNumber, r, record);
     }
 
     return r;
@@ -159,11 +159,13 @@ async function run() {
   const lines = content.split(/[\r\n]+/);
   const groupedLines = [];
   let record = [];  
+  let lineNumber = 0;
   for (let line of lines) {
+    ++lineNumber;
     const parts = line.split(/\s+/);
     const daysOfTheWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Client Account Adjustments', 'Invoiced Adjustments', 'Adjustment Total'];
     if (daysOfTheWeek.includes(parts[0])) {
-      const r = buildRecord(record);
+      const r = buildRecord(record, lineNumber);
       if (r) {
         groupedLines.push(r);
         // console.log(record);
@@ -193,7 +195,7 @@ async function run() {
   }
 
   if (record.length > 0) {
-    const r = buildRecord(record);
+    const r = buildRecord(record, lineNumber);
     if (r) {
       groupedLines.push(r);
       // console.log(record);
