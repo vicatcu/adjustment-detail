@@ -24,9 +24,13 @@ function isNumeric(n) {
 }
 
 function buildRecord(record, lineNumber) {
+  if (record.length < 2) {
+    return null;
+  }
   if (record.length > 0) {
     const r = {};
-    r.date = record[0][0];
+    // r.date = record[0][0];
+    record = [['']].concat(record); // make believe date
     if (record[2]?.length === 6) {
       for (let ii = 0; ii < 6; ii++) {          
         r[record[1][ii]] = record[2][ii];  
@@ -69,7 +73,7 @@ function buildRecord(record, lineNumber) {
       }
       // if anything looks like Month Year, drop it
       record = record.filter(v => {
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'Octoboer', 'November', 'December'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'Octoboer', 'November', 'December', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         let startsWithMonth = false;
         for (const m of months) {
           if (v.startsWith(m)) {
@@ -88,8 +92,8 @@ function buildRecord(record, lineNumber) {
         return true;
       });
 
-      r['date'] = record[0];
-      r['Account No'] = record[1];
+      // r['date'] = record[0];
+      r['Account No'] = record[0];
       const amountIdx = record.findIndex(v => v.includes('$'));
       if (amountIdx >= 0) {
         r['Amount'] = record[amountIdx];
@@ -110,7 +114,7 @@ function buildRecord(record, lineNumber) {
       // if (dateTotalIdx >= 0) {
       //   remainingRecord = record.slice(0, dateTotalIdx);
       // }
-      const tabooIndices = [0, 1, amountIdx, typeIdx];
+      const tabooIndices = [0, amountIdx, typeIdx];
       if (nextSingleWordRecordIdx >= 0) {
         for (let ii = typeIdx + 1; ii <= typeIdx + 1 + nextSingleWordRecordIdx; ii++) {
           tabooIndices.push(ii);
@@ -179,10 +183,12 @@ async function run() {
   let record = [];  
   let lineNumber = 0;
   for (let line of lines) {
-    ++lineNumber;
+    ++lineNumber;    
+    line = line.trim().replace(/"/g, '');
     const parts = line.split(/\s+/);
-    const daysOfTheWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Client Account Adjustments', 'Invoiced Adjustments', 'Adjustment Total'];
-    if (daysOfTheWeek.includes(parts[0])) {
+    // const daysOfTheWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Client Account Adjustments', 'Invoiced Adjustments', 'Adjustment Total', 'Date Total:'];
+    // if (daysOfTheWeek.includes(parts[0])) {
+    if (line.startsWith('Account No')) {
       const r = buildRecord(record, lineNumber);
       if (r) {
         groupedLines.push(r);
@@ -192,7 +198,7 @@ async function run() {
       } 
       record = [];
     }
-    line = line.trim().replace(/"/g, '');
+    
     if (line.length > 0) {
       const p = line.split(/\t{3,}|\s{3,}/).filter(v => v.trim());
       const pp = [];
