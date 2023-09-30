@@ -94,7 +94,8 @@ function buildRecord(record, lineNumber) {
 
       // r['date'] = record[0];
       r['Account No'] = record[0];
-      const amountIdx = record.findIndex(v => v.includes('$'));
+      const allAmounts = record.map((v, idx) => v.includes('$') ? idx : null).filter(v => isNumeric(v));
+      const amountIdx = allAmounts.length > 0 ? allAmounts.slice(-1)[0] : -1;
       if (amountIdx >= 0) {
         r['Amount'] = record[amountIdx];
       }
@@ -160,6 +161,13 @@ function buildRecord(record, lineNumber) {
       console.log('UNDEFINED Client', lineNumber, record, r);
     }
 
+    if (record && Array.isArray(record[0])) {   0
+      const allAmounts = record.reduce((t, v) => t.concat(v), []).map(v => v.includes('$') ? v : null).filter(v => v !== null);
+      if (allAmounts.length >= 0) {
+        r['Amount'] = allAmounts.slice(-1)[0];
+      }
+    }
+
     if (r.Amount) {
       r.amount = +r.Amount.replace(/[$, ]/g, '');
     } else {
@@ -178,7 +186,10 @@ function buildRecord(record, lineNumber) {
 async function run() {
   const inputPath = path.resolve(__dirname, 'input.txt');
   const content = await fs.readFile(inputPath, 'utf8');
-  const lines = content.split(/[\r\n]+/);
+  let lines = content.split(/[\r\n]+/);
+  lines = lines.filter(v => !v.startsWith('Client Account Adjustments'));
+  lines = lines.filter(v => !v.startsWith('Invoiced Adjustments'));
+  lines = lines.filter(v => !v.startsWith('Adjustment Total'));
   const groupedLines = [];
   let record = [];  
   let lineNumber = 0;
